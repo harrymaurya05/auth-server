@@ -21,8 +21,8 @@ public class TestController {
 	public String userAccess() {
 		return "User Content.";
 	}
-
-	@GetMapping("/om")
+  
+	@GetMapping("/hari")
 	@PreAuthorize("hasRole('USER')")
 	public String testing(){return "testing";}
 
