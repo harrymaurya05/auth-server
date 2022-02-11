@@ -22,7 +22,7 @@ public class TestController {
 		return "User Content.";
 	}
 
-	@GetMapping("/hariom")
+	@GetMapping("/om")
 	@PreAuthorize("hasRole('USER')")
 	public String testing(){return "testing";}
 
