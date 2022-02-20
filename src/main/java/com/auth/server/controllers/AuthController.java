@@ -1,5 +1,6 @@
 package com.auth.server.controllers;
 
+import com.auth.server.service.user.UserDetailsImpl;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,7 +31,7 @@ import com.auth.server.payload.response.MessageResponse;
 import com.auth.server.repository.RoleRepository;
 import com.auth.server.repository.UserRepository;
 import com.auth.server.security.jwt.JwtUtils;
-import com.auth.server.security.services.UserDetailsImpl;
+
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -60,7 +61,7 @@ public class AuthController {
 		SecurityContextHolder.getContext().setAuthentication(authentication);
 		String jwt = jwtUtils.generateJwtToken(authentication);
 		
-		UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();		
+		UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 		List<String> roles = userDetails.getAuthorities().stream()
 				.map(item -> item.getAuthority())
 				.collect(Collectors.toList());
@@ -101,13 +102,13 @@ public class AuthController {
 		} else {
 			strRoles.forEach(role -> {
 				switch (role) {
-				case "admin":
+				case "ROLE_ADMIN":
 					Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
 							.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
 					roles.add(adminRole);
 
 					break;
-				case "mod":
+				case "ROLE_MODERATOR":
 					Role modRole = roleRepository.findByName(ERole.ROLE_MODERATOR)
 							.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
 					roles.add(modRole);
