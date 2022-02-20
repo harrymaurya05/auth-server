@@ -9,8 +9,9 @@ import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFprobe;
+import net.bramp.ffmpeg.probe.FFmpegFormat;
+import net.bramp.ffmpeg.probe.FFmpegProbeResult;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,12 +29,8 @@ public class FileStoreServiceImpl implements FileStoreService {
     private static final String video_path= "/Users/admin/.bitnami/stackman/machines/xampp/volumes/root/htdocs/hls/";
     private static final String processing_path = "/Users/admin/.bitnami/stackman/machines/xampp/volumes/root/htdocs/videoProcessing/";
     private static final String ffmpeg="ffmpeg ";
-    /*
-     * Step
-     * 1. store input file into processing folder append username and timestamp in file name before storing into processing folder
-     * 2. store file hls file in username folder->encryp(filename) folder->  encryp(filename).m2u8 and encryp(filename).<>.ts files
-     * 3. if Everytihng is sucessful then store this path in videos table
-     */
+    private  static final String thumbnailFileType = "jpg";
+
     @Override
     public ResponseEntity<?> storeAndEncodeFile(MultipartFile inputVideo) {
         logger.info("storeAndEncodeFile method called for inpute file :"+inputVideo.getOriginalFilename());
@@ -57,6 +54,7 @@ public class FileStoreServiceImpl implements FileStoreService {
                 String modifiedVideoPath= processing_path+videoName;
                 logger.info("Original File name :"+videoName+" | File store path :"+modifiedVideoPath);
                 encodeVideo(modifiedVideoPath,videoName);
+                generateThumbnail(modifiedVideoPath,videoName);
 
             }
             catch (IOException e) {
@@ -67,18 +65,102 @@ public class FileStoreServiceImpl implements FileStoreService {
         }
         return null;
     }
+    public void generateThumbnail(String modifiedVideoPath,String videoName ) throws IOException{
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userName = userDetails.getUsername();
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        Date date = new Date();
+        String dateInString = dateFormat.format(date);
+        String inFilename = modifiedVideoPath;
+        File fileLocation = new File(video_path + "/" + userName + "/");
+        if (!fileLocation.exists()) {
+
+            if (fileLocation.mkdirs()) {
+                logger.info("sub directories created successfully" + fileLocation.getPath());
+            }
+            else {
+                logger.info("failed to create sub directories");
+            }
+        }
+        String fileNameWithoudExtension = videoName.substring(0, videoName.lastIndexOf('.'));
+        File outFileName = new File(video_path + "/" + userName + "/" + fileNameWithoudExtension + "/thumbnail/");
+        logger.info("thumbnail path :"+outFileName);
+        if (!outFileName.exists()) {
+
+            if (outFileName.mkdirs()) {
+                logger.info("sub directories created successfully" + outFileName.getPath());
+            }
+            else {
+                logger.info("failed to create sub directories");
+            }
+        }
+
+        int frameAtSecond=0;
+        Double videoLength = 0.0;
+        // videoLengthInString=null;
+        int frameAtMinute = 0;
+
+        videoLength=findLengthOfVideo(inFilename);
+        if (videoLength > 0.0 && videoLength <= 60.0) {
+            frameAtSecond = 0;
+        }
+        if (videoLength > 60.0 && videoLength <= 120.0) {
+            frameAtMinute = 01;
+            frameAtSecond = 00;
+        }
+        if (videoLength > 120.0) {
+            frameAtMinute = 02;
+            frameAtSecond = 00;
+        }
+
+
+        /**
+         * generate frame at videoAtSecond seconds
+         */
+        String command="ffmpeg -i \""+modifiedVideoPath+"\" -ss 00:"+frameAtMinute+":"+frameAtSecond+".000 -vframes 1 \""+outFileName+"/thumbnail_%d."+thumbnailFileType+"\" -hide_banner";
+        logger.info("command :"+command);
+        long start = System.currentTimeMillis();
+        //Process p2 = Runtime.getRuntime().exec(command);
+        try {
+            System.out.println(command);
+            if(runScript(command)) {
+                logger.info("Operation Successfull!!!!");
+            }
+            else {
+                logger.info("Operation Failed ####");
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        long end = System.currentTimeMillis();
+
+        logger.info("time taken to generate thumbnail is: "+(end-start) +" sec");
+
+        logger.info("Thumbnail Done!!!");
+    }
+    public Double findLengthOfVideo(String videoPath) throws IOException{
+            Double videoLength;
+            final FFprobe ffprobe = new FFprobe();
+            FFmpegProbeResult probeResult = ffprobe.probe(videoPath);
+            FFmpegFormat format = probeResult.getFormat();
+            videoLength = format.duration;
+            logger.info("Video Duration : "+videoLength);
+            return videoLength;
+    }
     public void encodeVideo(String modifiedVideoPath,String videoName ) throws IOException {
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String userName = userDetails.getUsername();
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Date date = new Date();
         String dateInString = dateFormat.format(date);
-        final FFmpeg ffmpeg = new FFmpeg();
-        final FFprobe ffprobe = new FFprobe();
         String inFilename = modifiedVideoPath;
         File fileLocation = new File(video_path + "/" + userName + "/");
         String fileNameWithoudExtension = videoName.substring(0, videoName.lastIndexOf('.'));
-        String outFileName = video_path + "/" + userName + "/" + fileNameWithoudExtension + "/";
+        String outFileName = video_path + "/" + userName + "/" + fileNameWithoudExtension + "/video/";
         if (!fileLocation.exists()) {
             if (fileLocation.mkdirs()) {
                 logger.info("sub directories created successfully" + fileLocation.getPath());
@@ -99,10 +181,10 @@ public class FileStoreServiceImpl implements FileStoreService {
         try {
             System.out.println(conversion);
             if (runScript(conversion)) {
-                System.out.println("Operation Successfull!!!!");
+                logger.info("Operation Successfull!!!!");
             }
             else {
-                System.out.println("Operation Failed ####");
+                logger.info("Operation Failed ####");
             }
         }
         catch (IOException e) {
@@ -117,6 +199,7 @@ public class FileStoreServiceImpl implements FileStoreService {
 
         logger.info("encoding Done!!!");
     }
+
     private static boolean runScript(String cmd) throws IOException, InterruptedException {
         boolean success = false;
         ProcessBuilder processBuilder = new ProcessBuilder();
@@ -124,22 +207,10 @@ public class FileStoreServiceImpl implements FileStoreService {
         try {
 
             Process process = processBuilder.start();
-
             StringBuilder output = new StringBuilder();
-
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()));
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                //logger.info(line+"\n");
-
-                output.append(line + "\n");
-            }
-
             int exitVal = process.waitFor();
             if (exitVal == 0) {
-                logger.info("Done !!! \n"+output);
+                logger.info("Executed Sucessfully :"+cmd);
                 success = true;
                 //System.out.println(output);
                 //System.exit(0);
