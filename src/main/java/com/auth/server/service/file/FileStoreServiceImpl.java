@@ -1,5 +1,9 @@
 package com.auth.server.service.file;
 
+import com.auth.server.models.User;
+import com.auth.server.models.Video;
+import com.auth.server.repository.UserRepository;
+import com.auth.server.repository.VideoRepository;
 import com.auth.server.security.jwt.JwtUtils;
 import com.auth.server.service.user.UserDetailsImpl;
 import java.io.BufferedReader;
@@ -9,12 +13,15 @@ import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 import net.bramp.ffmpeg.FFprobe;
 import net.bramp.ffmpeg.probe.FFmpegFormat;
 import net.bramp.ffmpeg.probe.FFmpegProbeResult;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -26,17 +33,23 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class FileStoreServiceImpl implements FileStoreService {
     private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
+    private static final String baseUrl = "http://192.168.64.2/hls/";
+    private static final String baseUrlSuffix = "/video/master.m3u8";
     private static final String video_path= "/Users/admin/.bitnami/stackman/machines/xampp/volumes/root/htdocs/hls/";
     private static final String processing_path = "/Users/admin/.bitnami/stackman/machines/xampp/volumes/root/htdocs/videoProcessing/";
     private static final String ffmpeg="ffmpeg ";
     private  static final String thumbnailFileType = "jpg";
-
+    @Autowired UserRepository userRepository;
+    @Autowired VideoRepository videoRepository;
     @Override
     public ResponseEntity<?> storeAndEncodeFile(MultipartFile inputVideo) {
         logger.info("storeAndEncodeFile method called for inpute file :"+inputVideo.getOriginalFilename());
+        Video video = new Video();
+        String finalVideoUrl = null;
         String videoName = inputVideo.getOriginalFilename().replaceAll("\\s+", "");;
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String userName = userDetails.getUsername();
+        Optional<User> user = userRepository.findByUsername(userName);
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Date date = new Date();
         String dateInString = dateFormat.format(date);
@@ -53,8 +66,15 @@ public class FileStoreServiceImpl implements FileStoreService {
                 logger.info("Given file transfer to processing path Successfully!!!");
                 String modifiedVideoPath= processing_path+videoName;
                 logger.info("Original File name :"+videoName+" | File store path :"+modifiedVideoPath);
-                encodeVideo(modifiedVideoPath,videoName);
-                generateThumbnail(modifiedVideoPath,videoName);
+                finalVideoUrl = encodeVideo(modifiedVideoPath,videoName);
+                String finalVideoThumbnailUrl = generateThumbnail(modifiedVideoPath,videoName);
+                video.setVideoSize(inputVideo.getSize());
+                video.setVideoDuration(Double.parseDouble(findLengthOfVideo(modifiedVideoPath).toString()));
+                video.setEnable(true);
+                video.setThumbUrl(finalVideoThumbnailUrl);
+                video.setVideoUrl(finalVideoUrl);
+                video.setUser(user.get());
+                videoRepository.save(video);
 
             }
             catch (IOException e) {
@@ -65,7 +85,22 @@ public class FileStoreServiceImpl implements FileStoreService {
         }
         return null;
     }
-    public void generateThumbnail(String modifiedVideoPath,String videoName ) throws IOException{
+
+    @Override public List<Video> fetchVideosByUser() {
+        UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userName = userDetails.getUsername();
+        Optional<User> user = userRepository.findByUsername(userName);
+
+        return videoRepository.findByUser_id(Long.parseLong(user.get().getId().toString()));
+    }
+
+    @Override public List<Video> fetchVideos() {
+
+        return videoRepository.findAll();
+    }
+
+    public String  generateThumbnail(String modifiedVideoPath,String videoName ) throws IOException{
+        String thumbnailUrl = null;
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String userName = userDetails.getUsername();
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -117,7 +152,7 @@ public class FileStoreServiceImpl implements FileStoreService {
         /**
          * generate frame at videoAtSecond seconds
          */
-        String command="ffmpeg -i \""+modifiedVideoPath+"\" -ss 00:"+frameAtMinute+":"+frameAtSecond+".000 -vframes 1 \""+outFileName+"/thumbnail_%d."+thumbnailFileType+"\" -hide_banner";
+        String command="ffmpeg -i \""+modifiedVideoPath+"\" -ss 00:"+frameAtMinute+":"+frameAtSecond+".000 -vframes 1 -n \""+outFileName+"/thumbnail."+thumbnailFileType+"\" -hide_banner";
         logger.info("command :"+command);
         long start = System.currentTimeMillis();
         //Process p2 = Runtime.getRuntime().exec(command);
@@ -141,6 +176,8 @@ public class FileStoreServiceImpl implements FileStoreService {
         logger.info("time taken to generate thumbnail is: "+(end-start) +" sec");
 
         logger.info("Thumbnail Done!!!");
+        return baseUrl+ "/" + userName + "/" + fileNameWithoudExtension + "/thumbnail/"+"thumbnail."+thumbnailFileType;
+
     }
     public Double findLengthOfVideo(String videoPath) throws IOException{
             Double videoLength;
@@ -151,7 +188,8 @@ public class FileStoreServiceImpl implements FileStoreService {
             logger.info("Video Duration : "+videoLength);
             return videoLength;
     }
-    public void encodeVideo(String modifiedVideoPath,String videoName ) throws IOException {
+    public String  encodeVideo(String modifiedVideoPath,String videoName ) throws IOException {
+        String VideoUrl = null;
         UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String userName = userDetails.getUsername();
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -198,6 +236,7 @@ public class FileStoreServiceImpl implements FileStoreService {
 
 
         logger.info("encoding Done!!!");
+        return baseUrl+userName + "/" + fileNameWithoudExtension +baseUrlSuffix;
     }
 
     private static boolean runScript(String cmd) throws IOException, InterruptedException {
@@ -240,4 +279,5 @@ public class FileStoreServiceImpl implements FileStoreService {
         } else
             return false;
     }
+
 }
