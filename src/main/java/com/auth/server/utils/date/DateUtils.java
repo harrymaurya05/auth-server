@@ -5,7 +5,7 @@
  *  @version     1.0, Dec 12, 2011
  *  @author singla
  */
-package com.auth.server.models;
+package com.auth.server.utils.date;
 
 import java.io.IOException;
 import java.text.DateFormat;

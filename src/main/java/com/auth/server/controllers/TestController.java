@@ -2,8 +2,11 @@ package com.auth.server.controllers;
 
 import com.auth.server.models.User;
 import com.auth.server.models.Video;
+import com.auth.server.models.VideoEncodingSyncStatusDTO;
 import com.auth.server.repository.UserRepository;
 import com.auth.server.repository.VideoRepository;
+import com.auth.server.service.encoding.VideoEncodingService;
+import com.auth.server.utils.encrption.EncryptionUtils;
 import java.io.IOException;
 import java.util.Optional;
 import javax.jms.JMSException;
@@ -30,6 +33,8 @@ public class TestController {
     @Autowired UserRepository userRepository;
 	@Autowired
 	private JmsTemplate jmsTemplate;
+
+	@Autowired VideoEncodingService videoEncodingService;
 	@GetMapping("/all")
 	@PreAuthorize("hasRole('ROLE_USER') or hasRole('MODERATOR') or hasRole('ADMIN')")
 	public String allAccess() {
@@ -104,6 +109,13 @@ public class TestController {
 	@GetMapping("/admin")
 	@PreAuthorize("hasRole('ADMIN')")
 	public String adminAccess() {
+		String videoName = "test.mp4";
+		String userName = "hariom";
+		String dateInString = "01012000";
+		String test = EncryptionUtils.base64Encode(videoName+userName+dateInString);
+		System.out.println(test);
+		System.out.println(EncryptionUtils.base64UrlDecode(test));
+
 		return "Admin Board.";
 	}
 
@@ -121,6 +133,21 @@ public class TestController {
 		});
 		return "Hariom";
 	}
+
+	@GetMapping("/mongo")
+	public String addMongoData(){
+		VideoEncodingSyncStatusDTO videoEncodingSyncStatusDTO = new VideoEncodingSyncStatusDTO();
+		videoEncodingService.save(videoEncodingSyncStatusDTO);
+		return "Data Added";
+	}
+
+	@GetMapping("/thread")
+	public String testThreading(){
+		
+		return "thread";
+	}
+
+
 
 
 }

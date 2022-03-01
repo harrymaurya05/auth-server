@@ -1,12 +1,12 @@
 package com.auth.server.models;
 
+import com.auth.server.utils.date.DateUtils;
 import java.io.Serializable;
 import java.util.Date;
 import javax.persistence.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "channelOrderSyncStatus")
-//@CompoundIndexes({ @CompoundIndex(name = "tenant_channel", def = "{'tenantCode' :  1, 'channelCode' :  1}", unique = true) })
 public class VideoEncodingSyncStatusDTO implements Serializable {
 
     private static final long           serialVersionUID    = 8742974020680542729L;
@@ -17,6 +17,7 @@ public class VideoEncodingSyncStatusDTO implements Serializable {
     private String                      channelCode;
     private String                      tenantCode;
     private Channel.SyncExecutionStatus syncExecutionStatus = Channel.SyncExecutionStatus.IDLE;
+    private String                      requestId;
     private String                      message;
     private long                        totalMileStones;
     private long                        currentMileStone;
@@ -31,9 +32,13 @@ public class VideoEncodingSyncStatusDTO implements Serializable {
     private Date                        created;
     private Date                        lastMileStoneUpdateTime;
 
-    public VideoEncodingSyncStatusDTO(String channelCode) {
-        this.channelCode = channelCode;
+    public VideoEncodingSyncStatusDTO() {
+
         this.created = DateUtils.getCurrentTime();
+    }
+    public VideoEncodingSyncStatusDTO(String requestId) {
+
+        this.requestId = requestId;
     }
 
     public String getId() {
@@ -62,6 +67,10 @@ public class VideoEncodingSyncStatusDTO implements Serializable {
 
     public void setSyncExecutionStatus(Channel.SyncExecutionStatus syncExecutionStatus) {
         this.syncExecutionStatus = syncExecutionStatus;
+    }
+
+    public Channel.SyncExecutionStatus getSyncExecutionStatus() {
+        return syncExecutionStatus;
     }
 
     public String getMessage() {
@@ -188,5 +197,13 @@ public class VideoEncodingSyncStatusDTO implements Serializable {
 
     public void setCreated(Date created) {
         this.created = created;
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
     }
 }

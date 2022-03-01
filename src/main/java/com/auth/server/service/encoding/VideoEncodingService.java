@@ -7,4 +7,6 @@ import com.auth.server.models.VideoEncodingSyncStatusDTO;
  */
 public interface VideoEncodingService {
     public VideoEncodingSyncStatusDTO save(VideoEncodingSyncStatusDTO videoEncodingSyncStatusDTO);
+    public VideoEncodingSyncStatusDTO getVideoEncodingStatus(String requestId);
+    public VideoEncodingSyncStatusDTO updateVideoEncodingStatus(VideoEncodingSyncStatusDTO videoEncodingSyncStatusDTO);
 }
