@@ -34,12 +34,12 @@ public class Video {
 
 
     @Column(name="video_size")
-    private  Long videoSize;
+    private  double videoSize;
 
 
 
     @Column(name="video_duration")
-    private long videoDuration;
+    private double videoDuration;
 
 
     @Size(max = 255)
@@ -68,7 +68,7 @@ public class Video {
     public Video() {
     }
 
-    public Video(User user, Long videoSize, long videoDuration, @Size(max = 255) String videoUrl, boolean enable,
+    public Video(User user, double videoSize, double videoDuration, @Size(max = 255) String videoUrl, boolean enable,
             @NotBlank @Size(max = 255) String thumbUrl)
     {
         this.user = user;
@@ -95,19 +95,19 @@ public class Video {
         this.user = user;
     }
 
-    public Long getVideoSize() {
+    public double getVideoSize() {
         return videoSize;
     }
 
-    public void setVideoSize(Long videoSize) {
+    public void setVideoSize(double videoSize) {
         this.videoSize = videoSize;
     }
 
-    public long getVideoDuration() {
+    public double getVideoDuration() {
         return videoDuration;
     }
 
-    public void setVideoDuration(long videoDuration) {
+    public void setVideoDuration(double videoDuration) {
         this.videoDuration = videoDuration;
     }
 
