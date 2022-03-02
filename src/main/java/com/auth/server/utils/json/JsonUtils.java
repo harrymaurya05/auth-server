@@ -1,4 +1,4 @@
-package com.auth.server.utils;
+package com.auth.server.utils.json;
 
 import java.util.ArrayList;
 import java.util.List;
