@@ -1,4 +1,4 @@
-package com.auth.server.utils;
+package com.auth.server.utils.activemq;
 
 import com.auth.server.security.jwt.JwtUtils;
 import com.auth.server.service.file.FileStoreService;

@@ -7,7 +7,7 @@
  */
 package com.auth.server.utils.activemq;
 
-import com.auth.server.utils.JsonUtils;
+import com.auth.server.utils.json.JsonUtils;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
